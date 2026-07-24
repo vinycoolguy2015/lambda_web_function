@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather + Air Quality Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh; background: #0f1b2a;
+            font-family: "Amazon Ember", "Helvetica Neue", Roboto, Arial, sans-serif;
+            color: #d1d5db; padding: 1.5rem;
+        }
+        .container { max-width: 56rem; margin: 0 auto; }
+        h1 { font-size: 1.5rem; color: #fff; margin-bottom: 1.5rem; text-align: center; }
+
+        .search-bar {
+            display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+        }
+        .search-bar input {
+            flex: 1; padding: 0.75rem 1rem; background: #1a2332;
+            border: 1px solid #414d5c; border-radius: 0.5rem;
+            color: #fff; font-size: 1rem; outline: none;
+        }
+        .search-bar input:focus { border-color: #539fe5; }
+        .search-bar button {
+            padding: 0.75rem 1.5rem; background: #539fe5; color: #fff;
+            border: none; border-radius: 0.5rem; font-size: 1rem;
+            font-weight: 600; cursor: pointer;
+        }
+        .search-bar button:hover { background: #3b82f6; }
+
+        .panel {
+            background: #1a2332; border: 1px solid #414d5c;
+            border-radius: 1rem; margin-bottom: 1rem; overflow: hidden;
+        }
+        .panel-header {
+            padding: 0.75rem 1.25rem; border-bottom: 1px solid #414d5c;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .panel-header h2 { font-size: 1rem; color: #fff; font-weight: 600; }
+        .panel-body { padding: 1.25rem; }
+
+        .current-main {
+            display: flex; align-items: center; gap: 1.5rem;
+            margin-bottom: 1.25rem; flex-wrap: wrap;
+        }
+        .current-temp {
+            font-size: 3.5rem; color: #fff; font-weight: 700;
+            line-height: 1;
+        }
+        .current-emoji { font-size: 3rem; }
+        .current-desc { color: #8b949e; font-size: 1rem; }
+        .current-feels { color: #8b949e; font-size: 0.9rem; margin-top: 0.25rem; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+            gap: 0.75rem;
+        }
+        .stat-card {
+            background: #232f3e; border-radius: 0.75rem; padding: 1rem;
+            text-align: center;
+        }
+        .stat-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .stat-value { font-size: 1.1rem; color: #fff; font-weight: 600; }
+        .stat-label { font-size: 0.75rem; color: #8b949e; margin-top: 0.125rem; }
+
+        .aqi-bar {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1rem; background: #232f3e; border-radius: 0.75rem;
+        }
+        .aqi-value {
+            font-size: 2rem; font-weight: 700; min-width: 3rem; text-align: center;
+        }
+        .aqi-details { flex: 1; }
+        .aqi-label { font-size: 1rem; color: #fff; font-weight: 600; }
+        .aqi-pollutants { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
+
+        .forecast-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+            gap: 0.75rem;
+        }
+        .forecast-card {
+            background: #232f3e; border-radius: 0.75rem; padding: 1rem;
+            text-align: center;
+        }
+        .forecast-date { font-size: 0.75rem; color: #8b949e; margin-bottom: 0.5rem; }
+        .forecast-emoji { font-size: 1.75rem; }
+        .forecast-temps { margin-top: 0.5rem; }
+        .forecast-high { color: #fff; font-weight: 600; }
+        .forecast-low { color: #8b949e; font-size: 0.85rem; }
+        .forecast-rain { font-size: 0.75rem; color: #60a5fa; margin-top: 0.25rem; }
+
+        .alert-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem; background: #3b1818;
+            border: 1px solid #7f1d1d; border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .alert-item:last-child { margin-bottom: 0; }
+        .alert-icon { font-size: 1.25rem; }
+        .alert-text { color: #fca5a5; font-size: 0.9rem; }
+
+        .no-alerts {
+            color: #4ade80; font-size: 0.9rem; text-align: center;
+            padding: 0.5rem;
+        }
+
+        .sun-times {
+            display: flex; gap: 2rem; justify-content: center;
+        }
+        .sun-item { text-align: center; }
+        .sun-icon { font-size: 1.5rem; }
+        .sun-time { color: #fff; font-size: 1rem; font-weight: 600; margin-top: 0.25rem; }
+        .sun-label { color: #8b949e; font-size: 0.75rem; }
+
+        .loading {
+            text-align: center; padding: 3rem; color: #8b949e;
+        }
+        .error-msg {
+            text-align: center; padding: 2rem; color: #fca5a5;
+            background: #3b1818; border-radius: 0.75rem;
+        }
+
+        .city-name { text-align: center; margin-bottom: 1rem; }
+        .city-name span { font-size: 1.25rem; color: #fff; font-weight: 600; }
+        .city-country { color: #8b949e; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌤 Weather + Air Quality Dashboard</h1>
+
+        <div class="search-bar">
+            <input type="text" id="cityInput" placeholder="Enter city name..." value="Singapore">
+            <button onclick="loadWeather()">Search</button>
+        </div>
+
+        <div id="content">
+            <div class="loading">Loading weather data...</div>
+        </div>
+    </div>
+
+    <script>
+        const contentEl = document.getElementById("content");
+        const cityInput = document.getElementById("cityInput");
+
+        cityInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") loadWeather();
+        });
+
+        async function loadWeather() {
+            const city = cityInput.value.trim();
+            if (!city) return;
+
+            contentEl.innerHTML = '<div class="loading">Loading weather data...</div>';
+
+            try {
+                const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    contentEl.innerHTML = `<div class="error-msg">${data.error}</div>`;
+                    return;
+                }
+
+                renderDashboard(data);
+            } catch (err) {
+                contentEl.innerHTML = `<div class="error-msg">Failed to load weather data</div>`;
+            }
+        }
+
+        function formatTime(isoStr) {
+            return new Date(isoStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + "T00:00:00");
+            return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+        }
+
+        function renderDashboard(data) {
+            const { current, airQuality, forecast, alerts, sunrise, sunset, city, country } = data;
+
+            contentEl.innerHTML = `
+                <div class="city-name">
+                    <span>${city}</span>
+                    <span class="city-country">${country}</span>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>Current Weather</h2></div>
+                    <div class="panel-body">
+                        <div class="current-main">
+                            <div class="current-emoji">${current.emoji}</div>
+                            <div>
+                                <div class="current-temp">${Math.round(current.temperature)}°C</div>
+                                <div class="current-feels">Feels like: ${Math.round(current.feelsLike)}°C</div>
+                            </div>
+                            <div class="current-desc">${current.description}</div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">💨</div>
+                                <div class="stat-value">${current.windSpeed} km/h</div>
+                                <div class="stat-label">Wind</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">☔</div>
+                                <div class="stat-value">${current.precipitation} mm</div>
+                                <div class="stat-label">Precipitation</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🌡</div>
+                                <div class="stat-value">${current.humidity}%</div>
+                                <div class="stat-label">Humidity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>😷 Air Quality</h2></div>
+                    <div class="panel-body">
+                        <div class="aqi-bar">
+                            <div class="aqi-value" style="color: ${airQuality.color}">${airQuality.aqi}</div>
+                            <div class="aqi-details">
+                                <div class="aqi-label" style="color: ${airQuality.color}">${airQuality.level}</div>
+                                <div class="aqi-pollutants">
+                                    PM2.5: ${airQuality.pm25} · PM10: ${airQuality.pm10} · NO₂: ${airQuality.no2} · O₃: ${airQuality.ozone}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>🌅 Sun Times</h2></div>
+                    <div class="panel-body">
+                        <div class="sun-times">
+                            <div class="sun-item">
+                                <div class="sun-icon">🌅</div>
+                                <div class="sun-time">${formatTime(sunrise)}</div>
+                                <div class="sun-label">Sunrise</div>
+                            </div>
+                            <div class="sun-item">
+                                <div class="sun-icon">🌇</div>
+                                <div class="sun-time">${formatTime(sunset)}</div>
+                                <div class="sun-label">Sunset</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>📅 5-Day Forecast</h2></div>
+                    <div class="panel-body">
+                        <div class="forecast-grid">
+                            ${forecast.map(day => `
+                                <div class="forecast-card">
+                                    <div class="forecast-date">${formatDate(day.date)}</div>
+                                    <div class="forecast-emoji">${day.emoji}</div>
+                                    <div class="forecast-temps">
+                                        <span class="forecast-high">${Math.round(day.tempMax)}°</span>
+                                        <span class="forecast-low"> / ${Math.round(day.tempMin)}°</span>
+                                    </div>
+                                    <div class="forecast-rain">☔ ${day.precipProbability}%</div>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h2>⚠️ Weather Alerts</h2></div>
+                    <div class="panel-body">
+                        ${alerts.length ? alerts.map(a => `
+                            <div class="alert-item">
+                                <span class="alert-icon">⚠️</span>
+                                <span class="alert-text">${a.message}</span>
+                            </div>
+                        `).join("") : '<div class="no-alerts">✓ No active weather alerts</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        loadWeather();
+    </script>
+</body>
+</html>
